@@ -8,8 +8,21 @@ import time
 load_dotenv()
 
 class Member():
-        
+    """
+    Represents a member participating in a decision-making process, interacting 
+    with an OpenAI assistant for guidance and opinion coordination.
+    """  
     def __init__(self) -> None:
+        """
+        Initializes a Member object.
+
+        Prepares the following:
+           * Establishes a connection to the OpenAI API using an API key.
+           * Loads an OpenAI assistant by its ID.
+           * Creates a new conversation thread for the member.
+           * Initializes the member's current position to [0, 0].
+           * Clears any previous turn results.
+        """
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.assistant_id = os.getenv("OPENAI_ASSISTANT_ID")
         ## Reserved for tool usage
@@ -38,6 +51,12 @@ class Member():
         self.turn_result = {}
         
     def inform(self, turn_result: Dict) -> None:
+        """
+        Updates the OpenAI thread with the member's latest turn results.
+
+        Args:
+            turn_result (Dict): A dictionary representing the final position of DM and other members.
+        """
         self.turn_result = turn_result
         self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
@@ -47,9 +66,13 @@ class Member():
         
     def update_position_(self) -> None:
         """
-        Updates the position of the member based on the member's voting choice
+        Updates the member's position based on their decision.
+
+        Retrieves updated coordinates from the OpenAI assistant by:
+           * Submitting a request to the assistant to analyze the thread. 
+           * Polling for the assistant's updated response.
+           * Parsing the assistant's response to extract the new coordinates.
         """
-        
         # Get opinion coordinates
         run = self.client.beta.threads.runs.create(
             thread_id=self.thread.id,
@@ -83,18 +106,42 @@ class Member():
                 break
             
     def vote(self) -> List:
+        """
+        Determines and reports the member's updated voting position.
+
+        Calls `update_position_` to refresh the member's position based on the 
+        latest decision-making interactions, then returns the updated coordinates.
+
+        Returns:
+            List: A list of coordinates representing the member's current position 
+                  (e.g., [x, y]).
+        """
         self.update_position_()
         return self.current_position
     
 
 class DecisionMarker():
-    
+    """
+    Represents a decision marker that calculates its position within a decision space
+    based on the positions of other member markers. 
+    """
     def __init__(self) -> None:
+        """
+        Initializes a DecisionMarker object with a starting position of [0, 0].
+        """
         self.position = [0,0]
         
-    def update_position(self, ATT_XY) -> None:
+    def update_position(self, M_XY) -> None:
         """
-        Calculates and updates position of the marker for given member marker positions
+        Updates the decision marker's position based on the positions of provided member markers.
+
+        Args:
+            M_XY (List): A list of tuples, where each tuple represents the 
+                         (x, y) coordinates of a member marker.
+
+        Updates the marker's position using a weighted average calculation.
+        The weights are inversely proportional to the square of the distance 
+        between the marker and each member marker.
         """
         
         initial_position = self.position
@@ -103,7 +150,7 @@ class DecisionMarker():
         final_x = 0
         final_y = 0
         
-        for a_x, a_y in ATT_XY:
+        for a_x, a_y in M_XY:
             distance = math.sqrt((initial_position[0] - a_x)**2 + (initial_position[1] - a_y)**2)
             if distance == 0:
                 # Avoid division by zero, and truncate the effect of the relevant member
@@ -120,6 +167,12 @@ class DecisionMarker():
         self.position = [final_x, final_y]
         
     def get_position(self) -> List:
+        """
+        Returns the current position of the decision marker.
+
+        Returns:
+            List: A list containing the marker's current x and y coordinates (e.g., [x, y]).
+        """
         return self.position
     
     
@@ -145,7 +198,7 @@ class Moderator():
             members: A list of Member instances, representing the members in the decision-making process.
             turn_results: A list of dictionaries, where each dictionary represents the results of a single turn. Each dictionary contains the following keys:
                 DM_XY: A list of coordinates representing the decision marker's position.
-                ATT_XY: A dictionary of coordinates, where each key is a member index and the corresponding value is a list of coordinates representing the member's position.
+                M_XY: A dictionary of coordinates, where each key is a member index and the corresponding value is a list of coordinates representing the member's position.
         """
         self.turn_num = 0
         self.max_turns = 10
@@ -154,7 +207,7 @@ class Moderator():
         self.option_xys = {'A':[1,1], 'B':[1,-1], 'C':[-1,1], 'D':[-1,-1]}
         self.turn_results = [{
             "DM_XY":[0.00, 0.00], 
-            "ATT_XY":{i:[0,0] for i in range(num_members)}
+            "M_XY":{i:[0,0] for i in range(num_members)}
             }]
         
     def subjective_informer_(self, att_idx):
@@ -163,11 +216,11 @@ class Moderator():
         """
         subjective_info = {}
         subjective_info['DM_XY'] = self.turn_results[self.turn_num]['DM_XY']
-        subjective_info['ATT_XY'] = {}
+        subjective_info['M_XY'] = {}
         for i, _ in enumerate(self.members):
             if att_idx == i:
                 continue
-            subjective_info['ATT_XY'][i] = self.turn_results[self.turn_num]["ATT_XY"][i]
+            subjective_info['M_XY'][i] = self.turn_results[self.turn_num]["M_XY"][i]
         return subjective_info
         
     def voting(self) -> None:
@@ -190,7 +243,7 @@ class Moderator():
         dm_position = self.decision_marker.get_position()
         
         # Save the turn's results
-        self.turn_results.append({"DM_XY": dm_position, "ATT_XY":member_positions})
+        self.turn_results.append({"DM_XY": dm_position, "M_XY":member_positions})
         
         
     def session(self) -> None:
