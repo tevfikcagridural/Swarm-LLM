@@ -1,2 +1,3 @@
-# Swarm LLMs
-This is an experiment on using LLMs as a swarm using them to make a decision.
+# Artificial Swarm Intelligence Simulation using Language Models
+
+This repository contains the code for simulating artificial swarm intelligence using OpenAI's completion and assistant APIs. By leveraging the collective decision-making capabilities of language models, this project facilitates multi-perspective decision-making, and fosters innovative solutions. Whether tackling ethical dilemmas, predicting market trends, or optimizing policy decisions, this project offers a versatile platform for exploring the potential of artificial swarm intelligence.

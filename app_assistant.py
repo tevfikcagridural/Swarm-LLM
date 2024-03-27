@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from openai import OpenAI, AssistantEventHandler
+from openai import OpenAI
 import math
 from typing import Dict, List
 import time

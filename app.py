@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from typing import List, Dict
 import math
-import json
+
 
 load_dotenv()
 openai.OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
